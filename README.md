@@ -1,0 +1,56 @@
+# typing_core
+
+日本語（かな）をローマ字でタイプするゲーム向けの入力部品です。TypeGunnerから切り出し中で、別リポジトリ化を予定しています。
+Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いません。
+
+## 依存
+
+- 依存方向は「ゲーム → typing_core」だけです。このaddonはゲーム固有のAutoload・scene・dataを参照しません。
+- 外部依存はありません。
+
+## 導入
+
+1. このdirectoryを `res://addons/typing_core/` に置く。
+2. `project.godot` の `[autoload]` に `TypingEngine="*res://addons/typing_core/TypingEngine.gd"` を登録する。
+
+## 含まれるもの
+
+| file | 役割 |
+| --- | --- |
+| `TypingEngine.gd` | Autoload。標的の登録、かな→ローマ字候補の生成、入力判定とfocus |
+| `kana_romaji.json` | かな→ローマ字の変換表。`TypingEngine` がready時に読む |
+| `TypingDisplay.tscn` / `.gd` | 標的1つ分のかな・入力済み文字・次の文字を表示する部品 |
+| `KeyboardDisplay.gd` | JIS/US配列のキーボードと担当指・次のキーを描く練習用部品 |
+| `WordPicker.gd` | 語彙から出題語を選ぶstatic関数。同時に出す標的の先頭文字の重複を避ける |
+| `tests/run_typing_core_tests.gd` | 回帰試験。`godot --headless --path . --script res://addons/typing_core/tests/run_typing_core_tests.gd` |
+
+## 契約
+
+### TypingEngine
+
+- `register_target(unit: Node, payload: Dictionary)`: `payload` は `kana` が必須、`kanji` は任意（表示用）。同じNodeの再登録は進捗を捨てる。Nodeの `tree_exiting` で自動的に解除する。
+- `unregister_target(unit)`、`clear_focus()`、`set_enabled(value: bool)`、`get_focused_unit()`
+- `get_state_for(unit) -> Dictionary`: `kanji`・`kana`・`current_input`・`display_romaji`・`all_candidates`・`active_candidates`・`is_focused`。未登録なら空。
+- `handle_text_input(text)`: 小文字1文字を渡す直接入力。実キーの受け付けは `_unhandled_input` が行い、Tab・Escでfocusを解除する。
+- signal: `word_completed(unit)`、`char_typed(unit)`、`mistype(unit)`、`no_target_hit`、`focus_changed(unit)`
+- focusの規則: 何もfocusしていないとき、最初の1文字が合う標的のうち先に登録したものをfocusする。ダメージ・スコアは呼び出し側が処理する。
+
+### WordPicker
+
+`load("res://addons/typing_core/WordPicker.gd")` で読み、static関数を呼びます。
+
+- `pick(words, rng, fallback, excluded_initials = [], previous_word_id = "", romaji_length_min = 1, romaji_length_max = 99) -> Dictionary`
+  - `words` は `id`・`kanji`・`kana`・`romaji`（配列）を持つDictionaryの配列。
+  - 前回の語・除外する先頭文字・最長ローマ字の長さで絞り、空なら先頭文字の条件だけを外し、それでも空なら全語から選ぶ。語彙が空なら `fallback` を返す。
+  - `rng.randi_range` を1回だけ使う。返り値は `id`・`kanji`・`kana`・`romaji` だけを持つ。
+- `get_initials(word) -> Array[String]`: ローマ字候補の先頭文字（小文字・重複なし）。
+- `get_max_romaji_length(word) -> int`
+
+### TypingDisplay
+
+- `target_path` か `set_target_unit(unit)` で表示対象を渡す。`refresh_display()` で再描画する。
+- 子nodeに `%KanaLabel`・`%RomajiLabel`・`%FocusPanel` を持つ前提です（`TypingDisplay.tscn`）。
+
+### KeyboardDisplay
+
+- `set_layout_id(layout_id)`（`"jis"` / `"us"`）、`set_highlight_keys(keys)`、`set_expected_key(key_id)`、`flash_key(key_id)`、`clear_flash()`
