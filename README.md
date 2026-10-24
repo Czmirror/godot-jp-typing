@@ -30,6 +30,7 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 | `kana_romaji.json` | かな→ローマ字の変換表。`TypingEngine` がready時に読み、`RomajiConverter` に渡す |
 | `TypingDisplay.tscn` / `.gd` | 標的1つ分のかな・入力済み文字・次の文字を表示する部品 |
 | `KeyboardDisplay.gd` | JIS/US配列のキーボードと担当指・次のキーを描く練習用部品 |
+| `keyboard_layouts.json` | `KeyboardDisplay` のキー配列（キーごとのid・表示文字・幅）と担当指。`width` と `label` は省略でき、省略時は幅52・表示はid |
 | `WordPicker.gd` | 語彙から出題語を選ぶstatic関数。同時に出す標的の先頭文字の重複を避ける |
 | `tests/run_tests.sh` | このaddon単体で回帰試験を実行する。`GODOT=/path/to/godot sh tests/run_tests.sh`。一時フォルダに最小のプロジェクトを作るので、ゲームへの取り込みは不要 |
 | `tests/run_romaji_converter_tests.gd` | `RomajiConverter` の境界ケース（「っ」「ん」の前後など）の試験。Autoloadは不要 |
