@@ -24,13 +24,13 @@ static func pick(
 
 	var candidates: Array[Dictionary] = []
 	for word in words:
-		if not _is_length_candidate(word, previous_word_id, romaji_length_min, romaji_length_max):
+		if not _is_selectable(word, previous_word_id, romaji_length_min, romaji_length_max):
 			continue
 		if not _has_excluded_initial(word, excluded_initials):
 			candidates.append(word)
 	if candidates.is_empty():
 		for word in words:
-			if _is_length_candidate(word, previous_word_id, romaji_length_min, romaji_length_max):
+			if _is_selectable(word, previous_word_id, romaji_length_min, romaji_length_max):
 				candidates.append(word)
 	if candidates.is_empty():
 		candidates = words
@@ -70,7 +70,8 @@ static func get_max_romaji_length(word: Dictionary) -> int:
 	return longest
 
 
-static func _is_length_candidate(word: Dictionary, previous_word_id: String, romaji_length_min: int, romaji_length_max: int) -> bool:
+## 前回の語ではなく、最長ローマ字の長さが範囲内なら出題できる。
+static func _is_selectable(word: Dictionary, previous_word_id: String, romaji_length_min: int, romaji_length_max: int) -> bool:
 	if String(word.get("id", "")) == previous_word_id:
 		return false
 	var max_romaji_length := get_max_romaji_length(word)

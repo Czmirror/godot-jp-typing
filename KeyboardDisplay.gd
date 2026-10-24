@@ -1,6 +1,21 @@
 extends Control
 ## JIS/US配列の練習用キーボードを生成し、担当指・次のキー・入力flashを表示する部品。
-## BootCampLessonが公開setterを通して状態を渡す。寸法はControlのlocal座標、flashの期限は起動後の単調時計のミリ秒。
+## ゲーム側が公開setterを通して状態を渡す。寸法はControlのlocal座標、flashの期限は起動後の単調時計のミリ秒。
+
+const FLASH_DURATION_MSEC := 220
+## 次のキーの点滅速度。_pulse_timeへdeltaに掛けて足す。
+const PULSE_SPEED := 4.0
+const KEY_HEIGHT := 52.0
+const DEFAULT_KEY_WIDTH := 52.0
+const KEY_SEPARATION := 8
+const ROW_SEPARATION := 10
+const KEY_CORNER_RADIUS := 10
+const KEY_FONT_SIZE := 20
+const PANEL_MARGIN_HORIZONTAL := 24
+const PANEL_MARGIN_TOP := 22
+const PANEL_MARGIN_BOTTOM := 20
+const PANEL_CORNER_RADIUS := 18
+const BORDER_WIDTH := 2
 
 const FINGER_COLORS := {
 	"pinky": Color("ffb3ba"),
@@ -136,7 +151,7 @@ const US_ROWS := [
 ]
 
 const FINGER_GROUPS := {
-	"pinky": ["A", ";", "Q", "P", "Z", "/", "-", ":", "@", "[", "]", "'", "^"],
+	"pinky": ["A", ";", "Q", "P", "Z", "/", "-", ":", "@", "[", "]", "'", "^", "1", "0", "="],
 	"ring": ["S", "L", "W", "O", "X", ".", "2", "9"],
 	"middle": ["D", "K", "E", "I", "C", ",", "3", "8"],
 	"index": ["F", "J", "R", "U", "T", "Y", "V", "B", "N", "M", "G", "H", "4", "5", "6", "7"],
@@ -161,7 +176,6 @@ var _base_keyboard_width := 0.0
 func _ready() -> void:
 	_build_base()
 	_rebuild_keyboard()
-	set_process(true)
 
 
 func _notification(what: int) -> void:
@@ -190,10 +204,10 @@ func set_expected_key(key_id: String) -> void:
 	_apply_key_visuals()
 
 
-## 指定keyを起動後時刻から220msの間flash表示する。
+## 指定keyを起動後時刻からFLASH_DURATION_MSECの間flash表示する。
 func flash_key(key_id: String) -> void:
 	var normalized := _normalize_key_id(key_id)
-	_flash_until[normalized] = Time.get_ticks_msec() + 220
+	_flash_until[normalized] = Time.get_ticks_msec() + FLASH_DURATION_MSEC
 	_apply_key_visuals()
 
 
@@ -204,7 +218,7 @@ func clear_flash() -> void:
 
 
 func _process(delta: float) -> void:
-	_pulse_time += delta * 4.0
+	_pulse_time += delta * PULSE_SPEED
 	if _flash_until.is_empty() and _expected_key.is_empty():
 		return
 	_prune_flash()
@@ -214,19 +228,19 @@ func _process(delta: float) -> void:
 func _build_base() -> void:
 	_root_panel = PanelContainer.new()
 	_root_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_root_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.03, 0.03, 0.04, 0.92), Color(0.75, 0.54, 0.28, 0.9), 18))
+	_root_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.03, 0.03, 0.04, 0.92), Color(0.75, 0.54, 0.28, 0.9), PANEL_CORNER_RADIUS))
 	add_child(_root_panel)
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_top", 22)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_bottom", 20)
+	margin.add_theme_constant_override("margin_left", PANEL_MARGIN_HORIZONTAL)
+	margin.add_theme_constant_override("margin_top", PANEL_MARGIN_TOP)
+	margin.add_theme_constant_override("margin_right", PANEL_MARGIN_HORIZONTAL)
+	margin.add_theme_constant_override("margin_bottom", PANEL_MARGIN_BOTTOM)
 	_root_panel.add_child(margin)
 
 	_rows_box = VBoxContainer.new()
-	_rows_box.add_theme_constant_override("separation", 10)
+	_rows_box.add_theme_constant_override("separation", ROW_SEPARATION)
 	margin.add_child(_rows_box)
 
 
@@ -242,7 +256,7 @@ func _rebuild_keyboard() -> void:
 	_base_keyboard_width = _measure_keyboard_width(rows)
 	for row_data in rows:
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
+		row.add_theme_constant_override("separation", KEY_SEPARATION)
 		_rows_box.add_child(row)
 		for key_data in row_data:
 			_add_key(row, key_data)
@@ -253,15 +267,15 @@ func _rebuild_keyboard() -> void:
 func _add_key(row: HBoxContainer, key_data: Dictionary) -> void:
 	var key_id := _normalize_key_id(String(key_data.get("id", "")))
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(float(key_data.get("width", 52)), 52.0)
-	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.18, 0.18, 0.2, 0.92), Color(0.36, 0.36, 0.4, 0.9), 10))
+	panel.custom_minimum_size = Vector2(float(key_data.get("width", DEFAULT_KEY_WIDTH)), KEY_HEIGHT)
+	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.18, 0.18, 0.2, 0.92), Color(0.36, 0.36, 0.4, 0.9), KEY_CORNER_RADIUS))
 	row.add_child(panel)
 
 	var label := Label.new()
 	label.text = String(key_data.get("label", key_id))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_font_size_override("font_size", KEY_FONT_SIZE)
 	label.add_theme_color_override("font_color", Color(0.86, 0.88, 0.94, 1.0))
 	label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	panel.add_child(label)
@@ -302,7 +316,7 @@ func _apply_key_visuals() -> void:
 			border_color = Color(1.0, 0.78, 0.78, 1.0)
 			font_color = Color(1, 1, 1, 1.0)
 
-		panel.add_theme_stylebox_override("panel", _panel_style(base_color, border_color, 10))
+		panel.add_theme_stylebox_override("panel", _panel_style(base_color, border_color, KEY_CORNER_RADIUS))
 		label.add_theme_color_override("font_color", font_color)
 
 
@@ -322,10 +336,6 @@ func _finger_color_for_key(key_id: String) -> Color:
 
 func _normalize_key_id(key_id: String) -> String:
 	var normalized := key_id.strip_edges()
-	if normalized.is_empty():
-		return normalized
-	if normalized == "Space" or normalized == "space":
-		return "SPACE"
 	return normalized.to_upper()
 
 
@@ -335,10 +345,10 @@ func _measure_keyboard_width(rows: Array) -> float:
 		var row_width := 0.0
 		var key_count := 0
 		for key_data in row_data:
-			row_width += float(key_data.get("width", 52))
+			row_width += float(key_data.get("width", DEFAULT_KEY_WIDTH))
 			key_count += 1
 		if key_count > 1:
-			row_width += float((key_count - 1) * 8)
+			row_width += float((key_count - 1) * KEY_SEPARATION)
 		widest = maxf(widest, row_width)
 	return widest
 
@@ -346,7 +356,7 @@ func _measure_keyboard_width(rows: Array) -> float:
 func _fit_keyboard_to_width() -> void:
 	if _rows_box == null or _base_keyboard_width <= 0.0:
 		return
-	var available_width := maxf(size.x - 48.0, 1.0)
+	var available_width := maxf(size.x - PANEL_MARGIN_HORIZONTAL * 2.0, 1.0)
 	var scale := minf(1.0, available_width / _base_keyboard_width)
 	_rows_box.scale = Vector2(scale, scale)
 	_rows_box.position = Vector2(maxf((available_width - (_base_keyboard_width * scale)) * 0.5, 0.0), 0.0)
@@ -355,13 +365,7 @@ func _fit_keyboard_to_width() -> void:
 func _panel_style(fill_color: Color, border_color: Color, radius: int) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fill_color
-	style.border_width_left = 2
-	style.border_width_top = 2
-	style.border_width_right = 2
-	style.border_width_bottom = 2
+	style.set_border_width_all(BORDER_WIDTH)
 	style.border_color = border_color
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_left = radius
-	style.corner_radius_bottom_right = radius
+	style.set_corner_radius_all(radius)
 	return style

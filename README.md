@@ -36,11 +36,13 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 
 ### TypingEngine
 
-- `register_target(unit: Node, payload: Dictionary)`: `payload` は `kana` が必須、`kanji` は任意（表示用）。同じNodeの再登録は進捗を捨てる。Nodeの `tree_exiting` で自動的に解除する。
+- `register_target(unit: Node, payload: Dictionary)`: `payload` は `kana` が必須、`kanji` は任意（表示用）。同じNodeの再登録は進捗を捨てる。Nodeの `tree_exiting` で自動的に解除する。ツリーに入れていないNodeは `tree_exiting` が来ないため、自分で `unregister_target` する。
+- `kana_romaji.json` にない文字（カタカナなど）を含む `kana` は入力できない。登録時に警告を出す。
 - `unregister_target(unit)`、`clear_focus()`、`set_enabled(value: bool)`、`get_focused_unit()`
 - `get_state_for(unit) -> Dictionary`: `kanji`・`kana`・`current_input`・`display_romaji`・`all_candidates`・`active_candidates`・`is_focused`。未登録なら空。
 - `handle_text_input(text)`: 小文字1文字を渡す直接入力。実キーの受け付けは `_unhandled_input` が行い、Tab・Escでfocusを解除する。
 - signal: `word_completed(unit)`、`char_typed(unit)`、`mistype(unit)`、`no_target_hit`、`focus_changed(unit)`
+- 単語を打ち終えたときは `char_typed` → `focus_changed(null)` → `word_completed` の順に通知する。`word_completed` の時点で登録は解除済みのため、`get_state_for` は空を返す。
 - focusの規則: 何もfocusしていないとき、最初の1文字が合う標的のうち先に登録したものをfocusする。ダメージ・スコアは呼び出し側が処理する。
 
 ### WordPicker

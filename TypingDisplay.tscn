@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://addons/typing_core/TypingDisplay.gd" id="1_1vmsk"]
+[ext_resource type="Script" uid="uid://o73o6nv8jfi7" path="res://addons/typing_core/TypingDisplay.gd" id="1_1vmsk"]
 
 [node name="TypingDisplay" type="Control"]
 layout_mode = 3
