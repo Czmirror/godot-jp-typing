@@ -94,8 +94,9 @@ func _build_compound_patterns(two_chars: String) -> Array[String]:
 	return _dedupe(patterns)
 
 
+## 子音を重ねる入力を単独入力より先に置く。表示は先頭候補を使うため、逆だと「きって」が kixtsute と表示される。
 func _build_small_tsu_patterns(segments: Array[Dictionary], index: int) -> Array[String]:
-	var patterns: Array[String] = SMALL_TSU_DIRECT.duplicate()
+	var patterns: Array[String] = []
 
 	# 次のかなの子音を重ねて打つ入力（katta）も受け付ける。
 	if index + 1 < segments.size():
@@ -107,6 +108,7 @@ func _build_small_tsu_patterns(segments: Array[Dictionary], index: int) -> Array
 			if CONSONANTS.has(head):
 				patterns.append(head)
 
+	patterns.append_array(SMALL_TSU_DIRECT)
 	return _dedupe(patterns)
 
 
