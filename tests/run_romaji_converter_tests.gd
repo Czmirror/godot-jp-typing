@@ -43,6 +43,11 @@ func _test_segments() -> void:
 	# RC4 「っ」が続くときは、後ろの「っ」だけが次の子音を重ねられる
 	var kappa: Array = _patterns_of("かっっぱ")
 	_check(not (kappa[1] as Array).has("p") and (kappa[2] as Array).has("p"), "連続する「っ」は後ろだけ子音を重ねる")
+	# RC4c 「し」は ci でも打てる（MS-IMEと同じ）
+	_check((_patterns_of("し")[0] as Array).has("ci"), "し を ci で打てる")
+	# RC4b 子音を重ねる入力が先頭候補になる（表示が kixtsute にならない）
+	var kitte: Array = _patterns_of("きって")
+	_check((kitte[1] as Array)[0] == "t" and (kitte[1] as Array).has("xtsu"), "「っ」は子音の重ね打ちを先頭候補にする")
 	# RC5 「ん」の後が「っ」ならnだけで打て、次の区切りでnを重ねてもよい
 	var antsu: Array = _patterns_of("あんっ")
 	_check((antsu[1] as Array).has("n") and (antsu[2] as Array).has("nxtu"), "「んっ」はnでもnnでも打てる")
