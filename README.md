@@ -1,6 +1,6 @@
 # typing_core
 
-日本語（かな）をローマ字でタイプするゲーム向けの入力部品です。TypeGunnerから切り出し中で、別リポジトリ化を予定しています。
+日本語（かな）をローマ字でタイプするゲーム向けの入力部品です。[TypeGunner](https://github.com/Czmirror/TypeGunner) の `addons/typing_core` から切り出しました（切り出し元commit: `298e873`）。
 Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いません。
 
 ## 依存
@@ -10,8 +10,16 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 
 ## 導入
 
-1. このdirectoryを `res://addons/typing_core/` に置く。
+このリポジトリのrootが、そのまま `res://addons/typing_core/` の中身になります。
+
+1. ゲームのリポジトリでsubmoduleとして追加する。
+
+   ```sh
+   git submodule add https://github.com/Czmirror/czmirror-godot-jp-typing.git addons/typing_core
+   ```
+
 2. `project.godot` の `[autoload]` に `TypingEngine="*res://addons/typing_core/TypingEngine.gd"` を登録する。
+3. 更新はsubmodule内でfetchし、確認したcommitをcheckoutしてから、ゲーム側でsubmoduleの参照をcommitする。
 
 ## 含まれるもの
 
@@ -22,7 +30,7 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 | `TypingDisplay.tscn` / `.gd` | 標的1つ分のかな・入力済み文字・次の文字を表示する部品 |
 | `KeyboardDisplay.gd` | JIS/US配列のキーボードと担当指・次のキーを描く練習用部品 |
 | `WordPicker.gd` | 語彙から出題語を選ぶstatic関数。同時に出す標的の先頭文字の重複を避ける |
-| `tests/run_typing_core_tests.gd` | 回帰試験。`godot --headless --path . --script res://addons/typing_core/tests/run_typing_core_tests.gd` |
+| `tests/run_typing_core_tests.gd` | 回帰試験。取り込んだゲームのrootで `godot --headless --path . --script res://addons/typing_core/tests/run_typing_core_tests.gd` を実行する（`TypingEngine` のAutoload登録が必要） |
 
 ## 契約
 
@@ -54,3 +62,7 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 ### KeyboardDisplay
 
 - `set_layout_id(layout_id)`（`"jis"` / `"us"`）、`set_highlight_keys(keys)`、`set_expected_key(key_id)`、`flash_key(key_id)`、`clear_flash()`
+
+## ライセンス
+
+未定です。当面は非公開で、公開する場合にライセンスを決めます。
