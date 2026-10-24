@@ -20,6 +20,7 @@ func _run() -> void:
 	_test_romaji_variants()
 	_test_focus_and_progress()
 	_test_word_picker()
+	_test_keyboard_display()
 	print("typing core regression: " + ("passed" if _failures == 0 else "FAILED"))
 	quit(0 if _failures == 0 else 1)
 
@@ -194,3 +195,11 @@ func _test_word_picker() -> void:
 	_check(initials == ["k", "c"], "先頭文字を小文字・重複なしで返す")
 	var payload: Dictionary = _word_picker.pick([words[1]] as Array[Dictionary], RandomNumberGenerator.new(), fallback)
 	_check(payload.keys() == ["id", "kanji", "kana", "romaji"], "id・kanji・kana・romajiだけを返す")
+
+func _test_keyboard_display() -> void:
+	var keyboard: Control = (load("res://addons/typing_core/KeyboardDisplay.gd") as GDScript).new() as Control
+	var unassigned_color: Color = keyboard.call("_finger_color_for_key", "UNASSIGNED")
+	# KD1 数字の1・0と=にも担当指の色が付く
+	for key_id: String in ["1", "0", "="]:
+		_check(keyboard.call("_finger_color_for_key", key_id) != unassigned_color, "担当指の色が付く: " + key_id)
+	keyboard.free()

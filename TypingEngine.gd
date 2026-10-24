@@ -1,18 +1,22 @@
 extends Node
-## 登録標的ごとにかな由来のローマ字候補と入力進捗を管理し、文字・単語完了をsignalで通知するAutoload。
-## 敵・標的・lessonが登録し、TypingDisplayや各モードが状態を読む。kana_romaji.jsonを読み込む。
-## 実キー入力を小文字1文字へ絞って処理する。対象の寿命はtree_exitingで追跡し、damageやscoreは呼び出し元が処理する。
+## 登録したタイプ対象ごとにかな由来のローマ字候補と入力進捗を管理し、文字・単語完了をsignalで通知するAutoload。
+## ゲーム側がタイプ対象のNodeを登録し、TypingDisplayなどが状態を読む。同じフォルダのkana_romaji.jsonを読み込む。
+## 実キー入力を小文字1文字へ絞って処理する。対象の寿命はtree_exitingで追跡し、ダメージやスコアは呼び出し元が処理する。
 
-signal word_completed(unit)
-signal char_typed(unit)
-signal mistype(unit)
+signal word_completed(unit: Node)
+signal char_typed(unit: Node)
+signal mistype(unit: Node)
 signal no_target_hit
-signal focus_changed(unit)
+signal focus_changed(unit: Node)
 
-const FIXED_RELEASE_KEY := KEY_TAB
-const DEFAULT_CANCEL_KEY := KEY_ESCAPE
-const KANA_ROMAJI_PATH := "res://addons/typing_core/kana_romaji.json"
-const SMALL_TSU_DIRECT := ["xtsu", "xtu", "ltsu", "ltu"]
+const FOCUS_CLEAR_KEYS: Array[Key] = [KEY_TAB, KEY_ESCAPE]
+## addonの置き場所に依存しないよう、このscriptと同じフォルダから読む。
+const KANA_ROMAJI_FILE := "kana_romaji.json"
+## 「っ」単体の入力。kana_romaji.jsonの「っ」は使わず、ここを正本とする。
+const SMALL_TSU_DIRECT: Array[String] = ["xtsu", "xtu", "ltsu", "ltu"]
+## 「ん」の直後がこの文字で始まるとき、nだけでは次のかなと区別できないためnn/xnを求める（kinen→きねん にならないように）。
+const N_AMBIGUOUS_HEADS: Array[String] = ["a", "i", "u", "e", "o", "y", "n"]
+const CONSONANTS: Array[String] = ["b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "p", "q", "r", "s", "t", "v", "w", "x", "y", "z"]
 
 ## ready時にかな変換JSONから読み、Autoloadの寿命中に共有する候補表。
 var _kana_map: Dictionary = {}
@@ -33,23 +37,24 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _enabled:
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		var key_event := event as InputEventKey
-		if key_event.keycode == FIXED_RELEASE_KEY or key_event.keycode == DEFAULT_CANCEL_KEY:
-			clear_focus()
-			get_viewport().set_input_as_handled()
-			return
+	var key_event := event as InputEventKey
+	if key_event == null or not key_event.pressed or key_event.echo:
+		return
 
-		var text := key_event.as_text_key_label().to_lower()
-		if key_event.keycode == KEY_MINUS or key_event.physical_keycode == KEY_MINUS:
-			text = "-"
-		if text.length() != 1:
-			return
-		if not _is_supported_input(text):
-			return
-
-		handle_text_input(text)
+	if FOCUS_CLEAR_KEYS.has(key_event.keycode):
+		clear_focus()
 		get_viewport().set_input_as_handled()
+		return
+
+	var text := key_event.as_text_key_label().to_lower()
+	# as_text_key_label()はマイナスキーを"Minus"と返すため、長音記号の入力として置き換える。
+	if key_event.keycode == KEY_MINUS or key_event.physical_keycode == KEY_MINUS:
+		text = "-"
+	if text.length() != 1 or not _is_supported_input(text):
+		return
+
+	handle_text_input(text)
+	get_viewport().set_input_as_handled()
 
 
 ## 実キー入力を有効・無効にする。無効化時はfocusとその入力進捗を解除する。
@@ -93,11 +98,9 @@ func clear_focus() -> void:
 	if _focused_unit == null:
 		return
 
-	var previous: Node = _focused_unit
-	var state: Dictionary = _states.get(previous, {})
+	var state: Dictionary = _states.get(_focused_unit, {})
 	if not state.is_empty():
 		_reset_progress(state)
-		_states[previous] = state
 
 	_focused_unit = null
 	focus_changed.emit(null)
@@ -121,6 +124,7 @@ func handle_text_input(text: String) -> void:
 
 
 ## 表示用Dictionaryを返す。current_inputは入力済み文字、display_romajiは残り候補込み。未登録なら空で、候補配列はdeep copyしない。
+## all_candidatesは全かな区切りの候補を重複なく並べたもので、単語全体の綴りの一覧ではない。
 func get_state_for(unit: Node) -> Dictionary:
 	if not _states.has(unit):
 		return {}
@@ -174,9 +178,8 @@ func _apply_input_to_target(unit: Node, text: String) -> void:
 	var next_segment_input: String = String(state.get("segment_input", "")) + text
 	var valid_candidates: Array[String] = []
 	for candidate in segment_candidates:
-		var candidate_text: String = String(candidate)
-		if candidate_text.begins_with(next_segment_input):
-			valid_candidates.append(candidate_text)
+		if candidate.begins_with(next_segment_input):
+			valid_candidates.append(candidate)
 
 	if valid_candidates.is_empty():
 		mistype.emit(unit)
@@ -186,16 +189,9 @@ func _apply_input_to_target(unit: Node, text: String) -> void:
 	state["typed_romaji"] = String(state.get("typed_romaji", "")) + text
 	state["active_segment_candidates"] = valid_candidates
 
-	var segment_completed := false
-	for candidate in valid_candidates:
-		if String(candidate) == next_segment_input:
-			segment_completed = true
-			break
-
-	if segment_completed:
+	if valid_candidates.has(next_segment_input):
 		_advance_segment(state)
 
-	_states[unit] = state
 	char_typed.emit(unit)
 
 	if int(state.get("segment_index", 0)) >= _get_segments(state).size():
@@ -214,9 +210,7 @@ func _find_matching_target(text: String) -> Node:
 
 func _focus_target(unit: Node) -> void:
 	_focused_unit = unit
-	var state: Dictionary = _states[unit]
-	_reset_progress(state)
-	_states[unit] = state
+	_reset_progress(_states[unit])
 	focus_changed.emit(unit)
 
 
@@ -224,14 +218,14 @@ func _reset_progress(state: Dictionary) -> void:
 	state["segment_index"] = 0
 	state["segment_input"] = ""
 	state["typed_romaji"] = ""
-	state["active_segment_candidates"] = _get_segment_patterns(state, 0, "")
+	state["active_segment_candidates"] = _get_segment_patterns(state, 0)
 
 
 func _advance_segment(state: Dictionary) -> void:
 	var next_index: int = int(state.get("segment_index", 0)) + 1
 	state["segment_index"] = next_index
 	state["segment_input"] = ""
-	state["active_segment_candidates"] = _get_segment_patterns(state, next_index, "")
+	state["active_segment_candidates"] = _get_segment_patterns(state, next_index)
 
 
 func _build_display_string(state: Dictionary) -> String:
@@ -246,14 +240,13 @@ func _build_display_string(state: Dictionary) -> String:
 	var segment_input: String = String(state.get("segment_input", ""))
 	var active_segment_candidates: Array[String] = state.get("active_segment_candidates", [])
 	if not active_segment_candidates.is_empty():
-		var current_candidate: String = String(active_segment_candidates[0])
-		display += current_candidate.substr(segment_input.length())
+		display += active_segment_candidates[0].substr(segment_input.length())
 
 	for i in range(segment_index + 1, segments.size()):
 		var patterns: Array[String] = segments[i].get("patterns", [])
 		if patterns.is_empty():
 			continue
-		display += String(patterns[0])
+		display += patterns[0]
 
 	return display
 
@@ -278,6 +271,8 @@ func _build_kana_segments(kana: String) -> Array[Dictionary]:
 		if token == "っ":
 			patterns = []
 		elif patterns.is_empty():
+			if not _kana_map.has(token):
+				push_warning("kana_romaji.jsonにない文字のため入力できません: %s（%s）" % [token, kana])
 			patterns = _strings_from_variant(_kana_map.get(token, [token]))
 		segments.append({
 			"kana": token,
@@ -317,18 +312,16 @@ func _build_compound_patterns(base_kana: String, small_kana: String, combined_ka
 
 
 func _build_small_tsu_patterns(segments: Array[Dictionary], index: int) -> Array[String]:
-	var patterns: Array[String] = []
-	for direct_pattern in SMALL_TSU_DIRECT:
-		patterns.append(String(direct_pattern))
+	var patterns: Array[String] = SMALL_TSU_DIRECT.duplicate()
 
+	# 次のかなの子音を重ねて打つ入力（katta）も受け付ける。
 	if index + 1 < segments.size():
 		var next_patterns: Array[String] = segments[index + 1].get("patterns", [])
 		for next_pattern in next_patterns:
-			var next_text: String = String(next_pattern)
-			if next_text.is_empty():
+			if next_pattern.is_empty():
 				continue
-			var head: String = next_text.substr(0, 1)
-			if _is_consonant(head):
+			var head: String = next_pattern.substr(0, 1)
+			if CONSONANTS.has(head):
 				patterns.append(head)
 
 	return _dedupe_candidates(patterns)
@@ -343,11 +336,9 @@ func _build_n_patterns(segments: Array[Dictionary], index: int) -> Array[String]
 	var next_patterns: Array[String] = segments[index + 1].get("patterns", [])
 	var requires_double_n := false
 	for next_pattern in next_patterns:
-		var next_text: String = String(next_pattern)
-		if next_text.is_empty():
+		if next_pattern.is_empty():
 			continue
-		var head: String = next_text.substr(0, 1)
-		if head in ["a", "i", "u", "e", "o", "y", "n"]:
+		if N_AMBIGUOUS_HEADS.has(next_pattern.substr(0, 1)):
 			requires_double_n = true
 			break
 
@@ -359,33 +350,26 @@ func _build_n_patterns(segments: Array[Dictionary], index: int) -> Array[String]
 func _extend_patterns_with_leading_n(patterns: Array[String]) -> Array[String]:
 	var extended: Array[String] = []
 	for pattern in patterns:
-		var text := String(pattern)
-		if text.is_empty():
+		if pattern.is_empty():
 			continue
-		extended.append("n" + text)
-	for pattern in patterns:
-		extended.append(String(pattern))
+		extended.append("n" + pattern)
+	extended.append_array(patterns)
 	return _dedupe_candidates(extended)
 
 
 func _flatten_segment_patterns(segments: Array[Dictionary]) -> Array[String]:
 	var candidates: Array[String] = []
 	for segment in segments:
-		for pattern in segment.get("patterns", []):
-			var pattern_text: String = String(pattern)
-			if not candidates.has(pattern_text):
-				candidates.append(pattern_text)
-	return candidates
+		var patterns: Array[String] = segment.get("patterns", [])
+		candidates.append_array(patterns)
+	return _dedupe_candidates(candidates)
 
 
-func _get_segment_patterns(state: Dictionary, index: int, fallback: String) -> Array[String]:
+func _get_segment_patterns(state: Dictionary, index: int) -> Array[String]:
 	var segments: Array[Dictionary] = _get_segments(state)
 	if index >= segments.size():
 		return []
-
 	var patterns: Array[String] = segments[index].get("patterns", [])
-	if patterns.is_empty() and not fallback.is_empty():
-		return [fallback]
 	return patterns.duplicate()
 
 
@@ -394,14 +378,17 @@ func _get_segments(state: Dictionary) -> Array[Dictionary]:
 
 
 func _load_kana_map() -> void:
-	var file: FileAccess = FileAccess.open(KANA_ROMAJI_PATH, FileAccess.READ)
+	var path: String = get_script().resource_path.get_base_dir().path_join(KANA_ROMAJI_FILE)
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		push_warning("kana_romaji.json could not be loaded.")
+		push_warning("kana_romaji.json could not be loaded: %s" % path)
 		return
 
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if typeof(parsed) == TYPE_DICTIONARY:
-		_kana_map = parsed as Dictionary
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_warning("kana_romaji.json is not a JSON object: %s" % path)
+		return
+	_kana_map = parsed as Dictionary
 
 
 func _strings_from_variant(value: Variant) -> Array[String]:
@@ -428,11 +415,7 @@ func _dedupe_candidates(candidates: Array[String]) -> Array[String]:
 func _is_supported_input(text: String) -> bool:
 	if text == "-":
 		return true
-	return text.unicode_at(0) >= 97 and text.unicode_at(0) <= 122
-
-
-func _is_consonant(character: String) -> bool:
-	return character in ["b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "p", "q", "r", "s", "t", "v", "w", "x", "y", "z"]
+	return text >= "a" and text <= "z"
 
 
 func _on_target_tree_exiting(unit: Node) -> void:
