@@ -88,9 +88,9 @@ func _test_focus_and_progress() -> void:
 	_engine.call("register_target", second, {"kana": "かく"})
 	_engine.call("register_target", other, {"kana": "さく"})
 
-	# UT7 同じ先頭候補なら先に登録した標的をfocusする
+	# UT7 同じ先頭候補なら先に登録した対象をfocusする
 	_engine.call("handle_text_input", "k")
-	_check(_engine.call("get_focused_unit") == first, "先に登録した標的をfocusする")
+	_check(_engine.call("get_focused_unit") == first, "先に登録した対象をfocusする")
 
 	# UT8 focus中の誤入力はmistypeで、進捗を保持する
 	_engine.call("handle_text_input", "z")
@@ -105,13 +105,13 @@ func _test_focus_and_progress() -> void:
 	_check(String(state.get("current_input", "")) == "", "clear_focusで入力進捗を戻す")
 	_check(not state.is_empty(), "clear_focus後も登録は残す")
 
-	# UT10 どの標的にも合わない入力はno_target_hit
+	# UT10 どの対象にも合わない入力はno_target_hit
 	_engine.call("handle_text_input", "x")
-	_check(_no_target_hits == 1, "合う標的がない入力でno_target_hitを通知する")
+	_check(_no_target_hits == 1, "合う対象がない入力でno_target_hitを通知する")
 
 	# UT11 表示用ローマ字は入力に合わせて候補が切り替わる
 	_engine.call("handle_text_input", "s")
-	_check(_engine.call("get_focused_unit") == other, "先頭候補が合う標的だけをfocusする")
+	_check(_engine.call("get_focused_unit") == other, "先頭候補が合う対象だけをfocusする")
 	state = _engine.call("get_state_for", other)
 	_check(String(state.get("display_romaji", "")) == "saku", "先頭候補で表示用ローマ字を作る")
 

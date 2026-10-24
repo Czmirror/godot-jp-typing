@@ -2,7 +2,7 @@
 
 [日本語](README.md)
 
-Components for games where players type Japanese (kana) with romaji. Extracted from `addons/typing_core` in [TypeGunner](https://github.com/Czmirror/TypeGunner).
+Components for games where players type Japanese (kana) with romaji. Extracted from `addons/typing_core` in my game TypeGunner.
 Written for Godot 4.6 in typed GDScript, without `class_name` or `preload`.
 
 ## Dependencies
