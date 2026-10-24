@@ -25,12 +25,15 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 
 | file | 役割 |
 | --- | --- |
-| `TypingEngine.gd` | Autoload。標的の登録、かな→ローマ字候補の生成、入力判定とfocus |
-| `kana_romaji.json` | かな→ローマ字の変換表。`TypingEngine` がready時に読む |
+| `TypingEngine.gd` | Autoload。標的の登録、入力判定とfocus |
+| `RomajiConverter.gd` | かなを入力単位に区切り、ローマ字候補を作る。状態を持たない |
+| `kana_romaji.json` | かな→ローマ字の変換表。`TypingEngine` がready時に読み、`RomajiConverter` に渡す |
 | `TypingDisplay.tscn` / `.gd` | 標的1つ分のかな・入力済み文字・次の文字を表示する部品 |
 | `KeyboardDisplay.gd` | JIS/US配列のキーボードと担当指・次のキーを描く練習用部品 |
 | `WordPicker.gd` | 語彙から出題語を選ぶstatic関数。同時に出す標的の先頭文字の重複を避ける |
-| `tests/run_typing_core_tests.gd` | 回帰試験。取り込んだゲームのrootで `godot --headless --path . --script res://addons/typing_core/tests/run_typing_core_tests.gd` を実行する（`TypingEngine` のAutoload登録が必要） |
+| `tests/run_tests.sh` | このaddon単体で回帰試験を実行する。`GODOT=/path/to/godot sh tests/run_tests.sh`。一時フォルダに最小のプロジェクトを作るので、ゲームへの取り込みは不要 |
+| `tests/run_romaji_converter_tests.gd` | `RomajiConverter` の境界ケース（「っ」「ん」の前後など）の試験。Autoloadは不要 |
+| `tests/run_typing_core_tests.gd` | `TypingEngine` とWordPicker・KeyboardDisplayの回帰試験。取り込んだゲームのrootで `godot --headless --path . --script res://addons/typing_core/tests/run_typing_core_tests.gd` でも実行できる（`TypingEngine` のAutoload登録が必要） |
 
 ## 契約
 
