@@ -124,13 +124,13 @@ func _build_n_patterns(segments: Array[Dictionary], index: int) -> Array[String]
 	return _dedupe(patterns)
 
 
+## 元の候補を先に置く。表示は先頭候補を使うため、nを足した候補が先だと「せんせい」が sennnsei と表示される。
 func _extend_patterns_with_leading_n(patterns: Array[String]) -> Array[String]:
-	var extended: Array[String] = []
+	var extended: Array[String] = patterns.duplicate()
 	for pattern in patterns:
 		if pattern.is_empty():
 			continue
 		extended.append("n" + pattern)
-	extended.append_array(patterns)
 	return _dedupe(extended)
 
 

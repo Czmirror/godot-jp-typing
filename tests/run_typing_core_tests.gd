@@ -141,6 +141,15 @@ func _test_focus_and_progress() -> void:
 	_engine.call("unregister_target", shortcut)
 	shortcut.free()
 
+	# UT15 「ん」の後の表示は、nを重ねない綴りを使う
+	for pair: Array in [["せんせい", "sennsei"], ["かんじ", "kannji"], ["あんっ", "annxtsu"]]:
+		var word: Node = Node.new()
+		_engine.call("register_target", word, {"kana": String(pair[0])})
+		state = _engine.call("get_state_for", word)
+		_check(String(state.get("display_romaji", "")) == String(pair[1]), "「ん」の後の表示: " + String(pair[0]))
+		_engine.call("unregister_target", word)
+		word.free()
+
 func _word(id: String, romaji: Array[String]) -> Dictionary:
 	return {"id": id, "kanji": id, "kana": id, "romaji": romaji}
 
