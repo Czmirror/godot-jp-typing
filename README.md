@@ -2,7 +2,7 @@
 
 [English](README.en.md)
 
-日本語（かな）をローマ字でタイプするゲーム向けの入力部品です。[TypeGunner](https://github.com/Czmirror/TypeGunner) の `addons/typing_core` から切り出しました（切り出し元commit: `298e873`）。
+日本語（かな）をローマ字でタイプするゲーム向けの入力部品です。自作ゲーム TypeGunner の `addons/typing_core` から切り出しました。
 Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いません。
 
 ## 依存
@@ -27,13 +27,13 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 
 | file | 役割 |
 | --- | --- |
-| `TypingEngine.gd` | Autoload。標的の登録、入力判定とfocus |
+| `TypingEngine.gd` | Autoload。対象の登録、入力判定とfocus |
 | `RomajiConverter.gd` | かなを入力単位に区切り、ローマ字候補を作る。状態を持たない |
 | `kana_romaji.json` | かな→ローマ字の変換表。`TypingEngine` がready時に読み、`RomajiConverter` に渡す |
-| `TypingDisplay.tscn` / `.gd` | 標的1つ分のかな・入力済み文字・次の文字を表示する部品 |
+| `TypingDisplay.tscn` / `.gd` | 対象1つ分のかな・入力済み文字・次の文字を表示する部品 |
 | `KeyboardDisplay.gd` | JIS/US配列のキーボードと担当指・次のキーを描く練習用部品 |
 | `keyboard_layouts.json` | `KeyboardDisplay` のキー配列（キーごとのid・表示文字・幅）と担当指。`width` と `label` は省略でき、省略時は幅52・表示はid |
-| `WordPicker.gd` | 語彙から出題語を選ぶstatic関数。同時に出す標的の先頭文字の重複を避ける |
+| `WordPicker.gd` | 語彙から出題語を選ぶstatic関数。同時に出す対象の先頭文字の重複を避ける |
 | `plugin.cfg` / `plugin.gd` | エディタのPluginとして有効にしたとき、`TypingEngine` をAutoloadに登録する |
 | `tests/run_tests.sh` | このaddon単体で回帰試験を実行する。`GODOT=/path/to/godot sh tests/run_tests.sh`。一時フォルダに最小のプロジェクトを作るので、ゲームへの取り込みは不要 |
 | `tests/run_romaji_converter_tests.gd` | `RomajiConverter` の境界ケース（「っ」「ん」の前後など）の試験。Autoloadは不要 |
@@ -50,7 +50,7 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 - `handle_text_input(text)`: 小文字1文字を渡す直接入力。実キーの受け付けは `_unhandled_input` が行い、Tab・Escでfocusを解除する。
 - signal: `word_completed(unit)`、`char_typed(unit)`、`mistype(unit)`、`no_target_hit`、`focus_changed(unit)`
 - 単語を打ち終えたときは `char_typed` → `focus_changed(null)` → `word_completed` の順に通知する。`word_completed` の時点で登録は解除済みのため、`get_state_for` は空を返す。
-- focusの規則: 何もfocusしていないとき、最初の1文字が合う標的のうち先に登録したものをfocusする。ダメージ・スコアは呼び出し側が処理する。
+- focusの規則: 何もfocusしていないとき、最初の1文字が合う対象のうち先に登録したものをfocusする。ダメージ・スコアは呼び出し側が処理する。
 
 ### WordPicker
 
