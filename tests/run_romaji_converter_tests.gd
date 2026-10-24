@@ -49,4 +49,11 @@ func _test_segments() -> void:
 	# RC6 末尾の「ん」はnだけ
 	_check(_patterns_of("みかん")[2] == ["n"], "末尾の「ん」はn")
 	# RC7 変換表にない文字はその文字自体を候補にする（実キーでは打てない）
-	_check(_patterns_of("カ") == [["カ"]], "変換表にない文字はその文字を候補にする")
+	_check(_patterns_of("漢") == [["漢"]], "変換表にない文字はその文字を候補にする")
+	# RC8 カタカナはひらがなと同じ候補になる（ヴも含む）
+	_check(_patterns_of("カッター") == _patterns_of("かったー"), "カタカナをひらがなとして扱う")
+	_check(_patterns_of("ヴァ") == _patterns_of("ゔぁ"), "ヴをゔとして扱う")
+	# RC9 外来語の拗音は合成表記と分解表記の両方を受け付ける
+	var thi: Array = _patterns_of("てぃ")
+	_check(thi.size() == 1 and (thi[0] as Array).has("thi") and (thi[0] as Array).has("texi"), "てぃ を thi と texi で打てる")
+	_check((_patterns_of("しぇ")[0] as Array).has("she"), "しぇ を she で打てる")

@@ -1,5 +1,7 @@
 # typing_core
 
+[English](README.en.md)
+
 日本語（かな）をローマ字でタイプするゲーム向けの入力部品です。[TypeGunner](https://github.com/Czmirror/TypeGunner) の `addons/typing_core` から切り出しました（切り出し元commit: `298e873`）。
 Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いません。
 
@@ -18,7 +20,7 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
    git submodule add https://github.com/Czmirror/godot-jp-typing.git addons/typing_core
    ```
 
-2. `project.godot` の `[autoload]` に `TypingEngine="*res://addons/typing_core/TypingEngine.gd"` を登録する。
+2. Project Settings > Plugins で `typing_core` を有効にする（`TypingEngine` がAutoloadに登録される）。または `project.godot` の `[autoload]` に `TypingEngine="*res://addons/typing_core/TypingEngine.gd"` を直接登録する。
 3. 更新はsubmodule内でfetchし、確認したcommitをcheckoutしてから、ゲーム側でsubmoduleの参照をcommitする。
 
 ## 含まれるもの
@@ -32,6 +34,7 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 | `KeyboardDisplay.gd` | JIS/US配列のキーボードと担当指・次のキーを描く練習用部品 |
 | `keyboard_layouts.json` | `KeyboardDisplay` のキー配列（キーごとのid・表示文字・幅）と担当指。`width` と `label` は省略でき、省略時は幅52・表示はid |
 | `WordPicker.gd` | 語彙から出題語を選ぶstatic関数。同時に出す標的の先頭文字の重複を避ける |
+| `plugin.cfg` / `plugin.gd` | エディタのPluginとして有効にしたとき、`TypingEngine` をAutoloadに登録する |
 | `tests/run_tests.sh` | このaddon単体で回帰試験を実行する。`GODOT=/path/to/godot sh tests/run_tests.sh`。一時フォルダに最小のプロジェクトを作るので、ゲームへの取り込みは不要 |
 | `tests/run_romaji_converter_tests.gd` | `RomajiConverter` の境界ケース（「っ」「ん」の前後など）の試験。Autoloadは不要 |
 | `tests/run_typing_core_tests.gd` | `TypingEngine` とWordPicker・KeyboardDisplayの回帰試験。取り込んだゲームのrootで `godot --headless --path . --script res://addons/typing_core/tests/run_typing_core_tests.gd` でも実行できる（`TypingEngine` のAutoload登録が必要） |
@@ -41,7 +44,7 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 ### TypingEngine
 
 - `register_target(unit: Node, payload: Dictionary)`: `payload` は `kana` が必須、`kanji` は任意（表示用）。同じNodeの再登録は進捗を捨てる。Nodeの `tree_exiting` で自動的に解除する。ツリーに入れていないNodeは `tree_exiting` が来ないため、自分で `unregister_target` する。
-- `kana_romaji.json` にない文字（カタカナなど）を含む `kana` は入力できない。登録時に警告を出す。
+- `kana` のカタカナはひらがなとして扱う（表示用の `kana` は渡した文字のまま）。`kana_romaji.json` にない文字（漢字など）を含む `kana` は入力できない。登録時に警告を出す。
 - `unregister_target(unit)`、`clear_focus()`、`set_enabled(value: bool)`、`get_focused_unit()`
 - `get_state_for(unit) -> Dictionary`: `kanji`・`kana`・`current_input`・`display_romaji`・`all_candidates`・`active_candidates`・`is_focused`。未登録なら空。
 - `handle_text_input(text)`: 小文字1文字を渡す直接入力。実キーの受け付けは `_unhandled_input` が行い、Tab・Escでfocusを解除する。
@@ -71,4 +74,4 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 
 ## ライセンス
 
-未定です。当面は非公開で、公開する場合にライセンスを決めます。
+[MIT License](LICENSE)
