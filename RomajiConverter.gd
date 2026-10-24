@@ -7,6 +7,10 @@ const SMALL_TSU_DIRECT: Array[String] = ["xtsu", "xtu", "ltsu", "ltu"]
 ## 「ん」の直後がこの文字で始まるとき、nだけでは次のかなと区別できないためnn/xnを求める（kinen→きねん にならないように）。
 const N_AMBIGUOUS_HEADS: Array[String] = ["a", "i", "u", "e", "o", "y", "n"]
 const CONSONANTS: Array[String] = ["b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "p", "q", "r", "s", "t", "v", "w", "x", "y", "z"]
+## カタカナ（ァ〜ヶ）はひらがなと同じ並びなので、この差を引いてひらがなの表を引く。
+const KATAKANA_FIRST := 0x30A1
+const KATAKANA_LAST := 0x30F6
+const KATAKANA_TO_HIRAGANA_OFFSET := 0x60
 
 var _kana_map: Dictionary = {}
 
@@ -31,8 +35,9 @@ static func load_kana_map(path: String) -> Dictionary:
 
 ## かなを入力単位に区切り、{"kana": String, "patterns": Array[String]} の配列を返す。
 ## 表にない文字は、その文字自体を候補にして警告する（実キーでは入力できない）。
+## カタカナはひらがなとして扱う。区切りの "kana" もひらがなになる。
 func build_segments(kana: String) -> Array[Dictionary]:
-	var segments: Array[Dictionary] = _split_into_segments(kana)
+	var segments: Array[Dictionary] = _split_into_segments(_to_hiragana(kana))
 	_apply_small_tsu_and_n_patterns(segments)
 	_allow_extra_n_after_n(segments)
 	return segments
@@ -155,3 +160,13 @@ func _dedupe(candidates: Array[String]) -> Array[String]:
 		if not unique.has(candidate):
 			unique.append(candidate)
 	return unique
+
+
+static func _to_hiragana(text: String) -> String:
+	var result := ""
+	for character in text:
+		var code := character.unicode_at(0)
+		if code >= KATAKANA_FIRST and code <= KATAKANA_LAST:
+			code -= KATAKANA_TO_HIRAGANA_OFFSET
+		result += String.chr(code)
+	return result
