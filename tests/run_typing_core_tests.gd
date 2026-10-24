@@ -207,8 +207,27 @@ func _test_word_picker() -> void:
 
 func _test_keyboard_display() -> void:
 	var keyboard: Control = (load("res://addons/typing_core/KeyboardDisplay.gd") as GDScript).new() as Control
+	root.add_child(keyboard)
 	var unassigned_color: Color = keyboard.call("_finger_color_for_key", "UNASSIGNED")
 	# KD1 数字の1・0と=にも担当指の色が付く
 	for key_id: String in ["1", "0", "="]:
 		_check(keyboard.call("_finger_color_for_key", key_id) != unassigned_color, "担当指の色が付く: " + key_id)
+
+	# KD2 キー配列をkeyboard_layouts.jsonから読み、JIS/USとも全キーを作る
+	for layout: Array in [["jis", 49], ["us", 49]]:
+		keyboard.call("set_layout_id", String(layout[0]))
+		var styles: Dictionary = keyboard.get("_key_styles")
+		_check(styles.size() == int(layout[1]), "キー数: %s = %d" % [layout[0], styles.size()])
+
+	# KD3 色の更新でStyleBoxを作り直さない
+	var styles_before: Dictionary = (keyboard.get("_key_styles") as Dictionary).duplicate()
+	var label_f: Label = (keyboard.get("_key_labels") as Dictionary)["F"]
+	var panel_f: PanelContainer = label_f.get_parent() as PanelContainer
+	var stylebox_before: StyleBox = panel_f.get_theme_stylebox("panel")
+	keyboard.call("set_highlight_keys", ["F", "J"] as Array[String])
+	keyboard.call("set_expected_key", "f")
+	keyboard.call("flash_key", "j")
+	keyboard.call("_process", 0.1)
+	_check(panel_f.get_theme_stylebox("panel") == stylebox_before, "次のキーの点滅でStyleBoxを使い回す")
+	_check(keyboard.get("_key_styles") == styles_before, "色の更新でキーのStyleBoxが変わらない")
 	keyboard.free()
