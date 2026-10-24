@@ -15,7 +15,7 @@ Godot 4.6系・typed GDScriptで書き、`class_name` と `preload` は使いま
 1. ゲームのリポジトリでsubmoduleとして追加する。
 
    ```sh
-   git submodule add https://github.com/Czmirror/czmirror-godot-jp-typing.git addons/typing_core
+   git submodule add https://github.com/Czmirror/godot-jp-typing.git addons/typing_core
    ```
 
 2. `project.godot` の `[autoload]` に `TypingEngine="*res://addons/typing_core/TypingEngine.gd"` を登録する。
