@@ -21,6 +21,7 @@ func _run() -> void:
 	_test_focus_and_progress()
 	_test_word_picker()
 	_test_keyboard_display()
+	await _test_keyboard_centering()
 	print("typing core regression: " + ("passed" if _failures == 0 else "FAILED"))
 	quit(0 if _failures == 0 else 1)
 
@@ -231,3 +232,26 @@ func _test_keyboard_display() -> void:
 	_check(panel_f.get_theme_stylebox("panel") == stylebox_before, "次のキーの点滅でStyleBoxを使い回す")
 	_check(keyboard.get("_key_styles") == styles_before, "色の更新でキーのStyleBoxが変わらない")
 	keyboard.free()
+
+
+func _test_keyboard_centering() -> void:
+	var keyboard_script: GDScript = load("res://addons/typing_core/KeyboardDisplay.gd") as GDScript
+	var keyboard: Control = keyboard_script.new() as Control
+	root.add_child(keyboard)
+	for layout: String in ["jis", "us"]:
+		keyboard.call("set_layout_id", layout)
+		for width: float in [1080.0, 560.0]:
+			keyboard.size = Vector2(width, 360)
+			await process_frame
+			await process_frame
+			var rows: VBoxContainer = keyboard.get("_rows_box") as VBoxContainer
+			var row_width: float = float(keyboard.get("_base_keyboard_width")) * rows.scale.x
+			var left: float = rows.global_position.x - keyboard.global_position.x
+			var right: float = keyboard.size.x - left - row_width
+			_check(absf(left - right) < 1.0, "keyboard stays centered after container layout: %s %s" % [layout, width])
+			var space_row: HBoxContainer = rows.get_child(rows.get_child_count() - 1) as HBoxContainer
+			var space_key: Control = space_row.get_child(0) as Control
+			var space_center: float = space_key.global_position.x + space_key.size.x * rows.scale.x * 0.5
+			_check(absf(space_center - (keyboard.global_position.x + keyboard.size.x * 0.5)) < 1.0, "space key is centered: %s %s" % [layout, width])
+	keyboard.queue_free()
+	await process_frame

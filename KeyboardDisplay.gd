@@ -15,7 +15,8 @@ const KEY_FONT_SIZE := 20
 const PANEL_MARGIN_HORIZONTAL := 24
 const PANEL_MARGIN_TOP := 22
 const PANEL_MARGIN_BOTTOM := 20
-const PANEL_CORNER_RADIUS := 18
+const PANEL_CORNER_RADIUS := 16
+const PANEL_BORDER_WIDTH := 1
 const BORDER_WIDTH := 2
 
 ## addonの置き場所に依存しないよう、このscriptと同じフォルダから読む。
@@ -31,7 +32,7 @@ const FINGER_COLORS := {
 }
 const UNASSIGNED_FINGER_COLOR := Color(0.82, 0.82, 0.82, 1.0)
 const ROOT_FILL_COLOR := Color(0.03, 0.03, 0.04, 0.92)
-const ROOT_BORDER_COLOR := Color(0.75, 0.54, 0.28, 0.9)
+const ROOT_BORDER_COLOR := Color(0.94, 0.78, 0.32, 0.42)
 const KEY_FILL_COLOR := Color(0.18, 0.18, 0.2, 0.85)
 const KEY_BORDER_COLOR := Color(0.34, 0.34, 0.38, 0.9)
 const KEY_FONT_COLOR := Color(0.72, 0.74, 0.8, 1.0)
@@ -143,7 +144,11 @@ func _load_layouts() -> void:
 func _build_base() -> void:
 	var root_panel := PanelContainer.new()
 	root_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root_panel.add_theme_stylebox_override("panel", _panel_style(ROOT_FILL_COLOR, ROOT_BORDER_COLOR, PANEL_CORNER_RADIUS))
+	var frame_style: StyleBoxFlat = _panel_style(ROOT_FILL_COLOR, ROOT_BORDER_COLOR, PANEL_CORNER_RADIUS)
+	# キーの丸みは保ち、外枠だけを細い切り欠きのフレームにする。
+	frame_style.corner_detail = 1
+	frame_style.set_border_width_all(PANEL_BORDER_WIDTH)
+	root_panel.add_theme_stylebox_override("panel", frame_style)
 	add_child(root_panel)
 
 	var margin := MarginContainer.new()
@@ -154,9 +159,13 @@ func _build_base() -> void:
 	margin.add_theme_constant_override("margin_bottom", PANEL_MARGIN_BOTTOM)
 	root_panel.add_child(margin)
 
+	# Containerの再配置がキー群の中央位置を上書きしないよう、間に表示領域を置く。
+	var keyboard_surface: Control = Control.new()
+	margin.add_child(keyboard_surface)
+	keyboard_surface.resized.connect(_fit_keyboard_to_width)
 	_rows_box = VBoxContainer.new()
 	_rows_box.add_theme_constant_override("separation", ROW_SEPARATION)
-	margin.add_child(_rows_box)
+	keyboard_surface.add_child(_rows_box)
 
 
 func _rebuild_keyboard() -> void:
@@ -172,6 +181,8 @@ func _rebuild_keyboard() -> void:
 	for row_data: Array in rows:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", KEY_SEPARATION)
+		if row_data.size() == 1 and String(row_data[0].get("id", "")) == "SPACE":
+			row.alignment = BoxContainer.ALIGNMENT_CENTER
 		_rows_box.add_child(row)
 		for key_data: Dictionary in row_data:
 			_add_key(row, key_data)
@@ -272,7 +283,8 @@ func _measure_keyboard_width(rows: Array) -> float:
 func _fit_keyboard_to_width() -> void:
 	if _rows_box == null or _base_keyboard_width <= 0.0:
 		return
-	var available_width := maxf(size.x - PANEL_MARGIN_HORIZONTAL * 2.0, 1.0)
+	var surface: Control = _rows_box.get_parent() as Control
+	var available_width: float = maxf(surface.size.x, 1.0)
 	var scale := minf(1.0, available_width / _base_keyboard_width)
 	_rows_box.scale = Vector2(scale, scale)
 	_rows_box.position = Vector2(maxf((available_width - (_base_keyboard_width * scale)) * 0.5, 0.0), 0.0)
